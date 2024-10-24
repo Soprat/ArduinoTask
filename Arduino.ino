@@ -15,7 +15,7 @@ const int output4 = 4;
 const int buttonPin = D5;
 
 unsigned long currentTime = millis();
-unsigned long previousTime = 0; 
+unsigned long previousTime = 0;
 const long timeoutTime = 2000;
 
 bool lastButtonState = HIGH;
@@ -33,7 +33,7 @@ void setup() {
   Serial.println(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(5);
+    delay(500);
     Serial.print(".");
   }
   Serial.println("");
@@ -43,12 +43,16 @@ void setup() {
   server.begin();
 }
 
-void loop(){
+void loop() {
+  int a = 1;
   // Check button state
   bool currentButtonState = digitalRead(buttonPin);
-  if (lastButtonState != currentButtonState) {
+  if (lastButtonState == HIGH && currentButtonState == LOW) {
+    Serial.println("ButtonPressed");
     buttonPressed = true;
-    Serial.println(buttonPressed);
+  } else if (lastButtonState == LOW && currentButtonState == HIGH) {
+    Serial.println("ButtonReleased");
+    buttonPressed = false;
   }
   lastButtonState = currentButtonState;
 
@@ -71,7 +75,7 @@ void loop(){
             client.println("Content-type:text/html");
             client.println("Connection: close");
             client.println();
-            
+
             if (header.indexOf("GET /5/on") >= 0) {
               Serial.println("GPIO 5 on");
               output5State = "on";
@@ -79,7 +83,7 @@ void loop(){
             } else if (header.indexOf("GET /5/off") >= 0) {
               Serial.println("GPIO 5 off");
               output5State = "off";
-              digitalWrite(output5, LOW); 
+              digitalWrite(output5, LOW);
             } else if (header.indexOf("GET /4/on") >= 0) {
               Serial.println("GPIO 4 on");
               output4State = "on";
@@ -89,10 +93,10 @@ void loop(){
               output4State = "off";
               digitalWrite(output4, LOW);
             }
-            
+
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<meta http-equiv='refresh' content='3'>");  // Auto-refresh every 3 seconds
+            client.println("<meta http-equiv='refresh' content='1'>");  // Auto-refresh every second
             client.println("<link rel=\"icon\" href=\"data:,\">");
             client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
             client.println(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
@@ -108,6 +112,7 @@ void loop(){
             } else {
               client.println("<p><a href=\"/5/off\"><button class=\"button button2\">OFF</button></a></p>");
             }
+            
 
             // GPIO 4
             client.println("<p>GPIO 4 - State " + output4State + "</p>");
@@ -119,27 +124,50 @@ void loop(){
 
             // Button message
             if (buttonPressed) {
-              client.println("<p>Button was pressed ""</p>");
+
+              client.println("<p>Button was pressed: </p>");
               buttonPressed = false;
             }
-            Serial.println(buttonPressed);
-            // client.println("<p>Button was pressed: " + buttonPressed + "</p>");
 
             client.println("</body></html>");
-
             client.println();
-                        break;
-                      } else {
-                        currentLine = "";
-                      }
-                    } else if (c != '\r') {
-                      currentLine += c;
-                    }
-                  }
-                }
-                header = "";
-                client.stop();
-                Serial.println("Client disconnected.");
-                Serial.println("");
+            break;
+          } else {
+            currentLine = "";
+          }
+        } else if (c != '\r') {
+          currentLine += c;
+        }
+      }
+    }
+    header = "";
+    client.stop();
+    Serial.println("Client disconnected.");
+    Serial.println("");
+  }
+
+  // Check for serial data from PC program
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+
+    if (command == "5ON") {
+      digitalWrite(output5, HIGH);
+      output5State = "on";
+      Serial.println("GPIO 5 ON via Serial");
+    } else if (command == "5OFF") {
+      digitalWrite(output5, LOW);
+      output5State = "off";
+      Serial.println("GPIO 5 OFF via Serial");
+    } else if (command == "4ON") {
+      digitalWrite(output4, HIGH);
+      output4State = "on";
+      Serial.println("GPIO 4 ON via Serial");
+    } else if (command == "4OFF") {
+      digitalWrite(output4, LOW);
+      output4State = "off";
+      Serial.println("GPIO 4 OFF via Serial");
+    }
   }
 }
+
